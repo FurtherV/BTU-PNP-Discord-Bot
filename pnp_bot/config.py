@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -32,6 +33,16 @@ def _bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "ja", "on"}
 
 
+def _optional_month(name: str) -> tuple[int, int] | None:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return None
+    if not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", raw):
+        raise ConfigurationError(f"{name} muss das Format YYYY-MM haben, z. B. 2026-09.")
+    year, month = raw.split("-", maxsplit=1)
+    return int(year), int(month)
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     token: str
@@ -43,6 +54,10 @@ class Settings:
     debug_database_path: Path
     debug_enabled: bool
     log_level: str
+    automation_start_month: tuple[int, int] | None = None
+
+    def allows_automatic_survey(self, year: int, month: int) -> bool:
+        return self.automation_start_month is None or (year, month) >= self.automation_start_month
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -74,4 +89,5 @@ class Settings:
             debug_database_path=debug_database_path,
             debug_enabled=_bool("DEBUG_ENABLED"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
+            automation_start_month=_optional_month("AUTOMATION_START_MONTH"),
         )

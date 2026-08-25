@@ -98,12 +98,17 @@ Debug-Posts und -DMs sind echte Discord-Nachrichten und deutlich gekennzeichnet.
 | `ANNOUNCEMENT_CHANNEL_ID` | Zielkanal für Produktions- und Debugposts |
 | `ORGANIZER_ROLE_ID` | Orga-Rolle für Adminzugriff und Erinnerungen |
 | `TIMEZONE` | standardmäßig `Europe/Berlin` |
+| `AUTOMATION_START_MONTH` | optionaler erster Monat für automatische Abfragen im Format `YYYY-MM` |
 | `DATABASE_PATH` | produktive SQLite-Datei |
 | `DEBUG_DATABASE_PATH` | strikt getrennte Debug-SQLite-Datei |
 | `DEBUG_ENABLED` | aktiviert die `/debug`-Befehle |
 | `LOG_LEVEL` | beispielsweise `INFO` oder `DEBUG` |
 
 Produktions- und Debugpfad dürfen nicht identisch sein. `.env` und SQLite-Dateien sind durch `.gitignore` ausgeschlossen.
+
+Ist `AUTOMATION_START_MONTH` gesetzt, erstellt der Scheduler vor diesem Monat keine automatischen
+Abfragen. Ab dem konfigurierten Monat läuft die Monatsautomatisierung regulär weiter. Eine fehlende
+oder leere Variable behält das bisherige Verhalten bei. Manuelle Planungsstarts sind davon unabhängig.
 
 ## Ubuntu-Deployment
 
@@ -122,6 +127,7 @@ Die Produktionskonfiguration wird als `/etc/btu-pnp-bot.env` angelegt. Empfohlen
 ```dotenv
 DATABASE_PATH=/var/lib/btu-pnp-bot/registrations.sqlite3
 DEBUG_DATABASE_PATH=/var/lib/btu-pnp-bot/debug-registrations.sqlite3
+AUTOMATION_START_MONTH=2026-09
 DEBUG_ENABLED=false
 ```
 

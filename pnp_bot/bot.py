@@ -169,7 +169,10 @@ class RegistrationBot(commands.Bot):
         schedule = schedule_for_month(now.year, now.month, self.settings.timezone)
         try:
             survey = await self.production_db.get_survey(self.settings.guild_id, now.year, now.month)
-            if schedule.announcement_at <= now <= schedule.deadline:
+            if (
+                self.settings.allows_automatic_survey(now.year, now.month)
+                and schedule.announcement_at <= now <= schedule.deadline
+            ):
                 survey, _result = await self.service.start(now.year, now.month, "production")
             if survey is not None and now > survey.deadline:
                 retry_due = (

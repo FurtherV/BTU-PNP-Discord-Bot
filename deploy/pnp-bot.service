@@ -1,0 +1,22 @@
+[Unit]
+Description=BTU PnP Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pnpbot
+Group=pnpbot
+WorkingDirectory=/opt/btu-pnp-bot
+EnvironmentFile=/etc/btu-pnp-bot.env
+ExecStart=/opt/btu-pnp-bot/.venv/bin/python /opt/btu-pnp-bot/main.py
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/btu-pnp-bot
+
+[Install]
+WantedBy=multi-user.target

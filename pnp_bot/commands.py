@@ -7,6 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from .channel_lock import set_everyone_write_overwrite
 from .dates import german_date, parse_month
 from .export import create_workbook
 from .models import Registration, Survey
@@ -32,6 +33,11 @@ class RegistrationCommands(commands.Cog):
     anmeldungen = app_commands.Group(name="anmeldungen", description="Anmeldungen auswerten")
     monatsabfrage = app_commands.Group(name="monatsabfrage", description="Produktive Monatsplanung verwalten")
     debug = app_commands.Group(name="debug", description="Isolierte Entwicklungs- und Testbefehle")
+    kanal = app_commands.Group(
+        name="kanal",
+        description="Schreibzugriff eines Gruppenkanals verwalten",
+        guild_only=True,
+    )
 
     def __init__(self, bot):
         self.bot = bot
@@ -43,6 +49,12 @@ class RegistrationCommands(commands.Cog):
         return self.bot.debug_db if mode == "debug" else self.bot.production_db
 
     async def _admin(self, interaction: discord.Interaction) -> bool:
+        if interaction.guild_id != self.bot.settings.guild_id:
+            await interaction.response.send_message(
+                "Dieser Befehl ist nur auf dem konfigurierten Discord-Server verfügbar.",
+                ephemeral=True,
+            )
+            return False
         member = interaction.user
         allowed = isinstance(member, discord.Member) and (
             member.guild_permissions.administrator
@@ -52,11 +64,82 @@ class RegistrationCommands(commands.Cog):
             await interaction.response.send_message("Dafür benötigst du die konfigurierte Orga-Rolle.", ephemeral=True)
         return allowed
 
+    async def _set_channel_lock(
+        self, interaction: discord.Interaction, *, locked: bool
+    ) -> None:
+        if not await self._admin(interaction):
+            return
+        channel = interaction.channel
+        guild = interaction.guild
+        if not isinstance(channel, discord.TextChannel) or guild is None or guild.me is None:
+            await interaction.response.send_message(
+                "Dieser Befehl kann nur direkt in einem Textkanal verwendet werden.",
+                ephemeral=True,
+            )
+            return
+
+        if not channel.permissions_for(guild.me).manage_roles:
+            await interaction.response.send_message(
+                "Mir fehlt in diesem Kanal die Berechtigung **Rollen verwalten**, "
+                "um den Schreibschutz zu ändern.",
+                ephemeral=True,
+            )
+            return
+
+        updated, changed = set_everyone_write_overwrite(
+            channel.overwrites,
+            guild.default_role,
+            False if locked else None,
+        )
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        action = "gesperrt" if locked else "entsperrt"
+        if changed:
+            try:
+                await channel.edit(
+                    overwrites=updated,
+                    reason=(
+                        f"Kanal durch {interaction.user} ({interaction.user.id}) {action}"
+                    ),
+                )
+            except discord.Forbidden:
+                await interaction.edit_original_response(
+                    content=(
+                        "Discord hat die Änderung abgelehnt. Prüfe, ob der Bot in diesem "
+                        "Kanal **Rollen verwalten** darf."
+                    )
+                )
+                return
+            except discord.HTTPException:
+                await interaction.edit_original_response(
+                    content="Die Kanalrechte konnten wegen eines Discord-Fehlers nicht geändert werden."
+                )
+                return
+
+        if locked:
+            content = (
+                f"🔒 {channel.mention} ist jetzt für `@everyone` schreibgeschützt. "
+                "Discord-Administratoren können weiterhin schreiben."
+            )
+        else:
+            content = f"🔓 Der Schreibschutz für {channel.mention} ist aufgehoben."
+        if not changed:
+            content += " Die Kanalrechte waren bereits entsprechend gesetzt."
+        await interaction.edit_original_response(content=content)
+
     async def _debug_admin(self, interaction: discord.Interaction) -> bool:
         if not self.bot.settings.debug_enabled:
             await interaction.response.send_message("Der Debugmodus ist deaktiviert.", ephemeral=True)
             return False
         return await self._admin(interaction)
+
+    @kanal.command(name="sperren", description="Aktuellen Textkanal für Mitglieder sperren")
+    async def lock_channel(self, interaction: discord.Interaction) -> None:
+        await self._set_channel_lock(interaction, locked=True)
+
+    @kanal.command(name="entsperren", description="Schreibschutz im aktuellen Textkanal aufheben")
+    async def unlock_channel(self, interaction: discord.Interaction) -> None:
+        await self._set_channel_lock(interaction, locked=False)
 
     async def _survey(self, interaction: discord.Interaction, month: str | None, mode: Mode) -> Survey | None:
         try:

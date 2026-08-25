@@ -15,6 +15,7 @@ Aktuelle Version: **1.0.0**
 - isolierter Debugmodus mit eigener SQLite-Datenbank
 - individuelle Zustellverfolgung für Admin-DMs
 - automatische Wiederherstellung bestehender Buttons nach einem Neustart
+- sperr- und entsperrbare Gruppenkanäle über den `@everyone`-Overwrite
 
 ## Discord-Anwendung vorbereiten
 
@@ -28,6 +29,9 @@ Aktuelle Version: **1.0.0**
    - Nachrichtenverlauf anzeigen
    - Dateien anhängen
 5. Eine Orga-Rolle anlegen. Mitglieder dieser Rolle und Server-Administratoren dürfen Adminbefehle verwenden; Erinnerungs-DMs gehen an die Mitglieder dieser Rolle.
+
+Für `/kanal sperren` und `/kanal entsperren` benötigt der Bot in den jeweiligen Gruppenkanälen
+zusätzlich **Rollen verwalten**, damit er den `@everyone`-Overwrite bearbeiten kann.
 
 Bei einer privaten Discord-Anwendung bleibt **Installation → Installations-Link** auf `Keine`. Der Bot wird dann über **OAuth2 → URL Generator** mit den Scopes `bot` und `applications.commands` eingeladen. Nur der Eigentümer der privaten Anwendung kann diese Installation durchführen.
 
@@ -73,6 +77,14 @@ Orga/Admin:
 - `/monatsabfrage status [monat]`
 - `/monatsabfrage planungsstart [monat]` – fehlende produktive Planung erstellen, einen gelöschten Post ersetzen oder einen bestehenden Post aktualisieren
 - `/monatsabfrage planungsende [monat]` – Anmeldung nach Bestätigung schließen und noch nicht zugestellte DMs senden
+- `/kanal sperren` – aktuellen Textkanal für Mitglieder schreibschützen
+- `/kanal entsperren` – Schreibschutz des aktuellen Textkanals aufheben
+
+Die Kanalbefehle verändern ausschließlich beim vorhandenen `@everyone`-Overwrite die Rechte
+`Nachrichten senden` und `Nachrichten in Threads senden`. Sichtbarkeit, Rollen- und Mitglieder-
+Overwrites sowie alle anderen Rechte bleiben unverändert. Discord-Administratoren umgehen diese
+Sperre automatisch; ausdrückliche Schreibfreigaben anderer Rollen oder Mitglieder können sie ebenfalls
+überstimmen. `Nachrichten verwalten` wird nicht verändert.
 
 `monat` verwendet das Format `YYYY-MM`. Ohne Angabe wird der aktuelle Monat verwendet. Wiederholte Produktionsaufrufe erzeugen weder doppelte Monatsdatensätze noch doppelte DMs an bereits erreichte Empfänger.
 

@@ -1,0 +1,2 @@
+Erstelle keine automatischen Commits außer es wird danach verlangt.
+Wird nach einem automatischen Commit verlangt, so soll er dem Standard https://www.conventionalcommits.org/en/v1.0.0/#summary folgen.
